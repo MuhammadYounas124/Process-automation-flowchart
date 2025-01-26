@@ -1,4 +1,5 @@
 import 'admin-lte/dist/css/adminlte.min.css';
+import PropertyPanel from './Propertypanel';
 import { useState } from 'react';
 import ReactFlow, {
     Background,
@@ -75,7 +76,7 @@ const FlowCanvas = () => {
                 </ReactFlow>
             </div>
             <div style={{ width: '300px', padding: '10px', borderLeft: '1px solid #ddd' }}>
-               { /*<PropertyPanel selectedNode={selectedNode} setNodes={setNodes} />*/}           
+               <PropertyPanel selectedNode={selectedNode} setNodes={setNodes} />           
                 </div>
         </div>
     );
