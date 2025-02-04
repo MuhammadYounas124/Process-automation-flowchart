@@ -1,114 +1,198 @@
-import { Node } from 'react-flow-renderer';
+import { Edge, Node } from 'reactflow';
 import { useState, useEffect } from 'react';
 
 interface PropertyPanelProps {
-    selectedNode: Node<any> | null;
-    setNodes: (updater: (nodes: Node<any>[]) => Node<any>[]) => void;
+  selectedNode: Node | null;
+  setNodes: (updater: (nodes: Node[]) => Node[]) => void;
+  setEdges: (updater: (edges: Edge[]) => Edge[]) => void;
+  deleteNode: (id: string) => void;
+  deleteEdge: (source: string, target: string) => void;
 }
 
-const PropertyPanel = ({ selectedNode, setNodes }: PropertyPanelProps) => {
-    const [label, setLabel] = useState('');
-    const [color, setColor] = useState('#ffffff'); // Default color
-    const [shape, setShape] = useState('rectangle'); // Default shape
+const shapeStyles: Record<string, React.CSSProperties> = {
+  rectangle: { borderRadius: '0%' },
+  circle: { borderRadius: '50%' },
+  ellipse: { borderRadius: '50% / 25%' },
+  diamond: { clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' },
+  square: { borderRadius: '0%' },
+  parallelogram: { transform: 'skew(20deg)' },
+  rhombus: { transform: 'rotate(45deg)' },
+  triangle: { clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' },
+};
 
-    useEffect(() => {
-        if (selectedNode) {
-            setLabel(selectedNode.data.label);
-            setColor(selectedNode.style?.backgroundColor || '#ffffff');
-            setShape(selectedNode.style?.borderRadius === '50%' ? 'circle' : 'rectangle');
-        }
-    }, [selectedNode]);
+const PropertyPanel = ({ selectedNode, setNodes, setEdges, deleteNode, deleteEdge }: PropertyPanelProps) => {
+  const [label, setLabel] = useState('');
+  const [color, setColor] = useState('#ffffff');
+  const [shape, setShape] = useState('rectangle');
+  const [lineStyle, setLineStyle] = useState('solid');
+  const [fontSize, setFontSize] = useState(14);
+  const [fontFamily, setFontFamily] = useState('Arial');
+  const [arrowStyle, setArrowStyle] = useState('default');
+  const [comments, setComments] = useState<{ [key: string]: string }>({});
 
-    if (!selectedNode || selectedNode.data.label === 'Start' || selectedNode.data.label === 'End') {
-        return <div style={{ padding: '10px' }}>No editable properties for this node</div>;
+  useEffect(() => {
+    if (selectedNode) {
+      setLabel(selectedNode.data.label);
+      setColor(selectedNode.style?.backgroundColor || '#ffffff');
+      setShape(selectedNode.style?.shape || 'rectangle');
+      setFontSize(parseInt(selectedNode.style?.fontSize || '14'));
+      setFontFamily(selectedNode.style?.fontFamily || 'Arial');
     }
+  }, [selectedNode]);
 
-    const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setLabel(e.target.value);
-    };
+  const handleSave = () => {
+    if (selectedNode) {
+      setNodes((nodes) =>
+        nodes.map((node) =>
+          node.id === selectedNode.id
+            ? {
+                ...node,
+                data: { ...node.data, label },
+                style: {
+                  ...node.style,
+                  backgroundColor: color,
+                  ...shapeStyles[shape],
+                  fontSize: `${fontSize}px`,
+                  fontFamily,
+                },
+              }
+            : node
+        )
+      );
 
-    const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setColor(e.target.value);
-    };
+      setEdges((edges) =>
+        edges.map((edge) =>
+          edge.source === selectedNode.id || edge.target === selectedNode.id
+            ? {
+                ...edge,
+                style: {
+                  ...edge.style,
+                  stroke: color,
+                  strokeDasharray: lineStyle === 'dashed' ? '4' : lineStyle === 'dotted' ? '2' : '0',
+                  markerEnd: arrowStyle !== 'none' ? `url(#${arrowStyle})` : undefined,
+                },
+              }
+            : edge
+        )
+      );
+    }
+  };
 
-    const handleShapeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setShape(e.target.value);
-    };
+  const handleCommentChange = (nodeId: string, comment: string) => {
+    setComments((prevComments) => ({
+      ...prevComments,
+      [nodeId]: comment,
+    }));
+  };
 
-    const handleSave = () => {
-        setNodes((nodes) =>
-            nodes.map((node) =>
-                node.id === selectedNode.id
-                    ? {
-                          ...node,
-                          data: { ...node.data, label },
-                          style: {
-                              ...node.style,
-                              backgroundColor: color,
-                              borderRadius: shape === 'circle' ? '50%' : '0',
-                          },
-                      }
-                    : node
-            )
-        );
-    };
+  if (!selectedNode || selectedNode.data.label === 'Start' || selectedNode.data.label === 'End') {
+    return <div>No editable properties for this node</div>;
+  }
 
-    return (
-        <div style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '5px' }}>
-            <h4>Node Properties</h4>
-            <label>
-                Label:
-                <input
-                    type="text"
-                    value={label}
-                    onChange={handleLabelChange}
-                    style={{
-                        width: '100%',
-                        padding: '5px',
-                        marginTop: '5px',
-                        borderRadius: '4px',
-                        border: '1px solid #ddd',
-                    }}
-                />
-            </label>
-            <label style={{ marginTop: '10px' }}>
-                Color:
-                <input
-                    type="color"
-                    value={color}
-                    onChange={handleColorChange}
-                    style={{ marginLeft: '5px' }}
-                />
-            </label>
-            <label style={{ marginTop: '10px', display: 'block' }}>
-                Shape:
-                <select
-                    value={shape}
-                    onChange={handleShapeChange}
-                    style={{
-                        width: '100%',
-                        padding: '5px',
-                        marginTop: '5px',
-                        borderRadius: '4px',
-                        border: '1px solid #ddd',
-                    }}
-                >
-                    <option value="rectangle">Rectangle</option>
-                    <option value="circle">Circle</option>
-                </select>
-            </label>
-            <button
-                onClick={handleSave}
-                style={{
-                    marginTop: '10px',
-                    padding: '5px 10px',
-                    cursor: 'pointer',
-                }}
-            >
-                Save
-            </button>
-        </div>
-    );
+  return (
+    <div className="p-2 border">
+      <h5>Node Properties</h5>
+      <div className="mb-2">
+        <label>Label</label>
+        <input
+          type="text"
+          className="form-control"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+        />
+      </div>
+      <div className="mb-2">
+        <label>Background Color</label>
+        <input
+          type="color"
+          className="form-control"
+          value={color}
+          onChange={(e) => setColor(e.target.value)}
+        />
+      </div>
+      <div className="mb-2">
+        <label>Shape</label>
+        <select
+          className="form-control"
+          value={shape}
+          onChange={(e) => setShape(e.target.value)}
+        >
+          <option value="rectangle">Rectangle</option>
+          <option value="circle">Circle</option>
+          <option value="ellipse">Ellipse</option>
+          <option value="diamond">Diamond</option>
+          <option value="square">Square</option>
+          <option value="parallelogram">Parallelogram</option>
+          <option value="rhombus">Rhombus</option>
+          <option value="triangle">Triangle</option>
+        </select>
+      </div>
+      <div className="mb-2">
+        <label>Font Size</label>
+        <input
+          type="number"
+          className="form-control"
+          value={fontSize}
+          onChange={(e) => setFontSize(parseInt(e.target.value))}
+        />
+      </div>
+      <div className="mb-2">
+        <label>Font Family</label>
+        <select
+          className="form-control"
+          value={fontFamily}
+          onChange={(e) => setFontFamily(e.target.value)}
+        >
+          <option value="Arial">Arial</option>
+          <option value="Helvetica">Helvetica</option>
+          <option value="Courier">Courier</option>
+        </select>
+      </div>
+      <div className="mb-2">
+        <label>Line Style</label>
+        <select
+          className="form-control"
+          value={lineStyle}
+          onChange={(e) => setLineStyle(e.target.value)}
+        >
+          <option value="solid">Solid</option>
+          <option value="dashed">Dashed</option>
+          <option value="dotted">Dotted</option>
+        </select>
+      </div>
+      <div className="mb-2">
+        <label>Arrow Style</label>
+        <select
+          className="form-control"
+          value={arrowStyle}
+          onChange={(e) => setArrowStyle(e.target.value)}
+        >
+          <option value="default">Default</option>
+          <option value="arrow">Arrow</option>
+          <option value="diamond">Diamond</option>
+          <option value="none">None</option>
+        </select>
+      </div>
+      <div className="mb-2">
+        <label>Comments</label>
+        <textarea
+          className="form-control"
+          rows={3}
+          value={comments[selectedNode.id] || ''}
+          onChange={(e) => handleCommentChange(selectedNode.id, e.target.value)}
+        />
+      </div>
+      <button onClick={handleSave} className="btn btn-success w-100">
+        Save Changes
+      </button>
+      <button onClick={() => deleteNode(selectedNode.id)} className="btn btn-danger w-100 mt-2">
+        Delete Node
+      </button>
+      <button onClick={() => deleteEdge(selectedNode.id, '2')} className="btn btn-warning w-100 mt-2">
+        Delete Edge with Node 2
+      </button>
+    </div>
+  );
 };
 
 export default PropertyPanel;
