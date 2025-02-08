@@ -12,8 +12,46 @@ import ReactFlow, {
   Edge,
   Connection,
   EdgeProps,
+  NodeProps,
 } from 'react-flow-renderer';
 import PropertyPanel from './Propertypanel';
+
+/* ====================
+   Custom Node Component
+   ==================== */
+const CustomNode = ({ data, id }: NodeProps) => {
+  return (
+    <div
+      style={{
+        position: 'relative',
+        padding: 10,
+        border: '1px solid #777',
+        borderRadius: 4,
+        background: data.backgroundColor || '#008000',
+      }}
+    >
+      <div>{data.label}</div>
+      <div
+        style={{
+          position: 'absolute',
+          top: -25,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          cursor: 'pointer',
+          background: '#fff',
+          border: '1px solid #ccc',
+          padding: '2px 5px',
+          borderRadius: 3,
+          fontSize: 10,
+          display: data.showConfig ? 'block' : 'none',
+        }}
+        onClick={() => data.onConfigClick(id)}
+      >
+        Config
+      </div>
+    </div>
+  );
+};
 
 /* ====================
    Custom Edge Component
@@ -65,20 +103,23 @@ const CustomEdge = (props: EdgeProps) => {
   );
 };
 
+const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
 
 const initialNodes: Node[] = [
   {
     id: '1',
-    data: { label: 'Start' },
-    position: { x: 250, y: 500 },
-    style: { backgroundColor: 'rgb(102, 238, 102)' },
+    type: 'custom',
+    data: { label: 'Start', onConfigClick: () => {}, showConfig: false },
+    position: { x: 250, y: 100 },
+    style: { backgroundColor: 'rgb(102, 238, 102)' }, // Green for start node
   },
   {
     id: '2',
-    data: { label: 'End' },
-    position: { x: 250, y: 700 },
-    style: { backgroundColor: 'red' },
+    type: 'custom',
+    data: { label: 'End', onConfigClick: () => {}, showConfig: false },
+    position: { x: 250, y: 400 },
+    style: { backgroundColor: 'red' }, // Red for end node
   },
 ];
 
@@ -99,6 +140,7 @@ const FlowCanvas = () => {
 
   const onConnect: OnConnect = useCallback(
     (params) => {
+      // Ensure that connections only happen between nodes that are not 'Start' or 'End'
       const validSource = params.source !== '1' && params.source !== '2';
       const validTarget = params.target !== '1' && params.target !== '2';
 
@@ -111,10 +153,18 @@ const FlowCanvas = () => {
     [setEdges, handleEdgeDelete]
   );
 
+  const handleConfigClick = (nodeId: string) => {
+    const node = nodes.find((n) => n.id === nodeId);
+    if (node) {
+      setSelectedNode(node);
+    }
+  };
+
   const addNode = () => {
     const newNode: Node = {
       id: `${nodeId}`,
-      data: { label: `Node ${nodeId}` },
+      type: 'custom',
+      data: { label: `Node ${nodeId}`, onConfigClick: handleConfigClick, showConfig: false },
       position: { x: Math.random() * 400, y: Math.random() * 400 },
       style: { backgroundColor: '#ffffff' },
     };
@@ -136,7 +186,7 @@ const FlowCanvas = () => {
     setNodes((nds) =>
       nds.map((n) =>
         n.id === node.id
-          ? { ...n, data: { ...n.data, showConfig: n.id !== '1' && n.id !== '2' } }
+          ? { ...n, data: { ...n.data, showConfig: true, onConfigClick: handleConfigClick } }
           : n
       )
     );
@@ -146,7 +196,7 @@ const FlowCanvas = () => {
     setNodes((nds) =>
       nds.map((n) =>
         n.id === node.id
-          ? { ...n, data: { ...n.data, showConfig: false } }
+          ? { ...n, data: { ...n.data, showConfig: false, onConfigClick: handleConfigClick } }
           : n
       )
     );
@@ -175,6 +225,7 @@ const FlowCanvas = () => {
           onNodeClick={(_event, node) => setSelectedNode(node)}
           onNodeMouseEnter={onNodeMouseEnter}
           onNodeMouseLeave={onNodeMouseLeave}
+          nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
           style={{ height: '100%', width: '100%' }}
@@ -182,44 +233,6 @@ const FlowCanvas = () => {
           <Background />
           <Controls />
           <MiniMap />
-          {nodes.map((node) => (
-            <div
-              key={node.id}
-              style={{
-                position: 'absolute',
-                left: node.position.x + 10,
-                top: node.position.y + 10,
-                zIndex: 1000,
-              }}
-            >
-              {node.data.showConfig && node.id !== '1' && node.id !== '2' && (
-                <button
-                  style={{
-                    background: '#fff',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    padding: '4px 8px',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => setSelectedNode(node)}
-                >
-                  Config
-                </button>
-              )}
-              {(node.id === '1' || node.id === '2') && node.data.showConfig && (
-                <div
-                  style={{
-                    background: '#fff',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    padding: '4px 8px',
-                  }}
-                >
-                  No editable properties for this node.
-                </div>
-              )}
-            </div>
-          ))}
         </ReactFlow>
       </div>
       <div className="border-start p-3" style={{ width: 300 }}>
