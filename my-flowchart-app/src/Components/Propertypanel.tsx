@@ -20,13 +20,13 @@ const shapeStyles: Record<string, React.CSSProperties> = {
   triangle: { clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' },
 };
 
-const PropertyPanel = ({ selectedNode, setNodes, setEdges, deleteNode, deleteEdge }: PropertyPanelProps) => {
+const PropertyPanel = ({ selectedNode, setNodes, setEdges, deleteNode }: PropertyPanelProps) => {
   const [label, setLabel] = useState('');
   const [color, setColor] = useState('#ffffff');
   const [shape, setShape] = useState('rectangle');
-  const [lineStyle, setLineStyle] = useState('solid');
   const [fontSize, setFontSize] = useState(14);
   const [fontFamily, setFontFamily] = useState('Arial');
+  const [lineStyle, setLineStyle] = useState('solid');
   const [arrowStyle, setArrowStyle] = useState('default');
   const [comments, setComments] = useState<{ [key: string]: string }>({});
 
@@ -34,11 +34,32 @@ const PropertyPanel = ({ selectedNode, setNodes, setEdges, deleteNode, deleteEdg
     if (selectedNode) {
       setLabel(selectedNode.data.label);
       setColor(selectedNode.style?.backgroundColor || '#ffffff');
-      setShape(selectedNode.style?.shape || 'rectangle');
+      setShape(selectedNode.data?.shape || 'rectangle');
       setFontSize(parseInt(selectedNode.style?.fontSize || '14'));
       setFontFamily(selectedNode.style?.fontFamily || 'Arial');
     }
   }, [selectedNode]);
+
+  const handleBackgroundColorChange = () => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === selectedNode?.id) {
+          return {
+            ...node,
+            style: {
+              ...node.style,
+              backgroundColor: color,
+            },
+            data: {
+              ...node.data,
+              backgroundColor: color, // Save the new color to data for persistence
+            },
+          };
+        }
+        return node;
+      })
+    );
+  };
 
   const handleSave = () => {
     if (selectedNode) {
@@ -47,7 +68,7 @@ const PropertyPanel = ({ selectedNode, setNodes, setEdges, deleteNode, deleteEdg
           node.id === selectedNode.id
             ? {
                 ...node,
-                data: { ...node.data, label },
+                data: { ...node.data, label, shape },
                 style: {
                   ...node.style,
                   backgroundColor: color,
@@ -75,6 +96,9 @@ const PropertyPanel = ({ selectedNode, setNodes, setEdges, deleteNode, deleteEdg
             : edge
         )
       );
+
+      // Update background color specifically
+      handleBackgroundColorChange();
     }
   };
 
@@ -83,6 +107,12 @@ const PropertyPanel = ({ selectedNode, setNodes, setEdges, deleteNode, deleteEdg
       ...prevComments,
       [nodeId]: comment,
     }));
+  };
+
+  const handleDeleteAllEdges = () => {
+    if (selectedNode) {
+      setEdges((edges) => edges.filter((edge) => edge.source !== selectedNode.id && edge.target !== selectedNode.id));
+    }
   };
 
   if (!selectedNode || selectedNode.data.label === 'Start' || selectedNode.data.label === 'End') {
@@ -188,8 +218,8 @@ const PropertyPanel = ({ selectedNode, setNodes, setEdges, deleteNode, deleteEdg
       <button onClick={() => deleteNode(selectedNode.id)} className="btn btn-danger w-100 mt-2">
         Delete Node
       </button>
-      <button onClick={() => deleteEdge(selectedNode.id, '2')} className="btn btn-warning w-100 mt-2">
-        Delete Edge with Node 2
+      <button onClick={handleDeleteAllEdges} className="btn btn-warning w-100 mt-2">
+        Delete All Edges
       </button>
     </div>
   );

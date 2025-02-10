@@ -27,10 +27,10 @@ const CustomNode = ({ data, id }: NodeProps) => {
         padding: 10,
         border: '1px solid #777',
         borderRadius: 4,
-        background: data.backgroundColor || '#008000',
+        background: data.backgroundColor || `#${Math.floor(Math.random() * 16777215).toString(16)}`,
       }}
     >
-      <div>{data.label}</div>
+      <strong>{data.label}</strong>
       <div
         style={{
           position: 'absolute',
@@ -140,7 +140,6 @@ const FlowCanvas = () => {
 
   const onConnect: OnConnect = useCallback(
     (params) => {
-      // Ensure that connections only happen between nodes that are not 'Start' or 'End'
       const validSource = params.source !== '1' && params.source !== '2';
       const validTarget = params.target !== '1' && params.target !== '2';
 
